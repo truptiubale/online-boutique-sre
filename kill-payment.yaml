@@ -1,0 +1,14 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-payment-service
+  namespace: online-boutique
+spec:
+  action: pod-failure
+  mode: all
+  selector:
+    namespaces:
+      - online-boutique
+    labelSelectors:
+      app: paymentservice
+  duration: "180s"

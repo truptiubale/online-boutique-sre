@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: checkout-test-script
+data:
+  checkout-test.sh: |
+    #!/bin/sh
+    FRONTEND_URL="http://frontend.online-boutique.svc.cluster.local"
+    PUSHGATEWAY_URL="http://pushgateway-prometheus-pushgateway.default.svc.cluster.local:9091"
+
+    ADD_TO_CART=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FRONTEND_URL/cart" -d "product_id=OLJCESPC7Z&quantity=1")
+    CHECKOUT=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$FRONTEND_URL/cart/checkout" -d "email=test@example.com&street_address=123+Test+St&zip_code=94043&city=Mountain+View&state=CA&country=USA&credit_card_number=4432801561520454&credit_card_expiration_month=1&credit_card_expiration_year=2030&credit_card_cvv=672")
+
+    if [ "$ADD_TO_CART" = "200" ] || [ "$ADD_TO_CART" = "302" ]; then
+      if [ "$CHECKOUT" = "200" ] || [ "$CHECKOUT" = "302" ]; then
+        RESULT=1
+        echo "Checkout test: SUCCESS"
+      else
+        RESULT=0
+        echo "Checkout test: FAILED at checkout step ($CHECKOUT)"
+      fi
+    else
+      RESULT=0
+      echo "Checkout test: FAILED at add-to-cart step ($ADD_TO_CART)"
+    fi
+
+    echo "checkout_success $RESULT" | curl -s --data-binary @- "$PUSHGATEWAY_URL/metrics/job/checkout_test"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: checkout-test-manual
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: checkout-test
+        image: curlimages/curl:latest
+        command: ["/bin/sh", "/scripts/checkout-test.sh"]
+        volumeMounts:
+        - name: script-volume
+          mountPath: /scripts
+      volumes:
+      - name: script-volume
+        configMap:
+          name: checkout-test-script
+          defaultMode: 0777
+      restartPolicy: Never
