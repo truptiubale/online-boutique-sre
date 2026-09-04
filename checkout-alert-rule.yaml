@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: checkout-alerts
+  namespace: default
+  labels:
+    release: monitoring
+spec:
+  groups:
+  - name: checkout.rules
+    rules:
+    - alert: CheckoutFailing
+      expr: checkout_success == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Checkout flow is failing"
+        description: "The synthetic checkout test has failed for over 1 minute."

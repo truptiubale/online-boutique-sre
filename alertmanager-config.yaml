@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: checkout-alerts-config
+  namespace: default
+  labels:
+    release: monitoring
+spec:
+  route:
+    receiver: ntfy-receiver
+    groupBy: ['alertname']
+    groupWait: 10s
+    groupInterval: 30s
+    repeatInterval: 5m
+  receivers:
+  - name: ntfy-receiver
+    webhookConfigs:
+    - url: https://ntfy.sh/trupti-sre-alerts-8k2p
+      sendResolved: true
